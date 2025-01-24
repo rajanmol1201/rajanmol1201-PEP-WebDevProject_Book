@@ -1,5 +1,18 @@
 // add variable references and event listeners here!
+let allBooks = [];
 
+const searchForm = document.getElementById("search-form");
+const searchInput = document.getElementById("search-input");
+const searchType = document.getElementById("search-type");
+const searchButton = document.getElementById("search-button");
+const bookList = document.getElementById("book-list");
+const selectedBook = document.getElementById("selected-book");
+const sortRatingButton = document.getElementById("sort-rating");
+const ebookFilter = document.getElementById("ebook-filter");
+
+searchForm.addEventListener("submit", handleSearch);
+sortRatingButton.addEventListener("click", handleSort);
+ebookFilter.addEventListener("change", handleFilter);
 /**
  * Searches for books using the Google Books API based on the given query and type.
  *
@@ -27,6 +40,28 @@
  * 
  */
 async function searchBooks(query, type) {
+    try{
+        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${type}:${query}&maxResults=10`);
+        const data = await response.json();
+
+        if (!data.items){
+            console.error("No items Found");
+            return [];
+        }
+        const books = data.items.map(item => ({
+            title: item.volumeInfo.title || "Unknown",
+            author_name: item.volumeInfo.authors?.join(", ") || "Unknown",
+            isbn: item.volumeInfo.industryIdentifiers?.[0]?.identifier || "Unknown",
+            cover_i: item.volumeInfo.imageLinks?.thumbnail || "",
+            ebook_access: item.accessInfo?.isEbook ? "E-book Access: Available": "E-book Access: Unavailable",
+            first_publish_year: item.volumeInfo.publishedDate?.split("-")[0] || "Unknown",
+            ratings_sortable: item.volumeInfo.averageRating || "Unknown"
+        }));
+        return books;
+    }catch(error){
+        console.error("Error: ", error);
+        return [];
+    }
 }
 
 /**
@@ -53,7 +88,25 @@ async function searchBooks(query, type) {
 * 5. Ensures that the 'selected-book' element is not visible.
 */
 function displayBookList(books) {
-  
+  bookList.innerHTML = "";
+  if(books.length === 0){
+    bookList.innerHTML = "<li>No Books Found</li>";
+  }else{
+    books.forEach(book => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+            <h3 class="title-element">${book.title}</h3>
+            <p class="author-element">Author: ${book.author_name}</p>
+            <img class="cover-element" src="${book.cover_i}" alt="${book.title} cover">
+            <p class="rating-element">Rating: ${book.ratings_sortable}</p>
+            <p class="ebook-element">${book.ebook_access}</p>
+        `;
+        li.addEventListener("click", () => displaySingleBook(book));
+        bookList.appendChild(li);
+    });
+  }
+  bookList.style.display = "block";
+  selectedBook.style.display = "none";
 }
 
 /**
@@ -75,7 +128,16 @@ function displayBookList(books) {
  * 7. Handles any errors that may occur during the search process.
  */
 async function handleSearch(event) {
+    event.preventDefault();
+    const query = searchInput.value.trim();
+    const type = searchType.value;
 
+    if(query === ""){
+        console.error("Search Something!");
+        return;
+    }
+    allBooks = await searchBooks(query, type);
+    displayBookList(allBooks);
 }
 
 
@@ -105,7 +167,17 @@ async function handleSearch(event) {
  * 
  */
 function displaySingleBook(book) {
-
+    selectedBook.innerHTML = `
+        <h2 class="title-element">${book.title}</h2>
+        <p class="author-element">Author: ${book.author_name}</p>
+        <p class="published-element">Published: ${book.first_publish_year}</p>
+        <img class="cover-element" src="${book.cover_i}" alt="${book.title} cover">
+        <p class="isbn-element">ISBN: ${book.isbn}</p>
+        <p class="ebook-element">${book.ebook_access}</p>
+        <p class="rating-element">Rating: ${book.ratings_sortable}</p>
+    `;
+    bookList.style.display = "none";
+    selectedBook.style.display = "block";
 }
 
 /**
@@ -124,7 +196,14 @@ function displaySingleBook(book) {
  * 
  */
 function handleFilter() {
-
+    const isEbookFilterEnabled = ebookFilter.checked;
+    const filteredBooks = allBooks.filter(book => {
+        const isFound = book.ebook_access === "E-book Access: Available";
+        return (isEbookFilterEnabled ? isFound : true);
+    }
+);
+    console.log("Filtered Books:", filteredBooks);
+    displayBookList(filteredBooks);
 }
 
 /**
@@ -142,5 +221,11 @@ function handleFilter() {
  * 
  */
 function handleSort() {
-
+    const sortedBooks = [...allBooks].sort((a, b) => {
+        const ratingA = parseFloat(a.ratings_sortable) || 0;
+        const ratingB = parseFloat(b.ratings_sortable) || 0;
+        return ratingB - ratingA;
+    }
+);
+    displayBookList(sortedBooks);
 }

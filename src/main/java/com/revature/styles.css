@@ -21,27 +21,35 @@ main {
 #search-form {
     gap: 1rem;
     margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
 }
 
 
 #filter-sort {
     justify-content: space-between;
     margin-bottom: 1rem;
+    display: flex;
 }
 
 #book-list {
     list-style-type: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fll, minmax(200px, 1fr));
+    gap: 1rem;
 }
 
 .book-item {
     border: 1px solid #ddd;
     padding: 1rem;
     border-radius: 5px;
+    transition: box-shadow 0.3s ease;
 }
 
 .book-item img {
     max-width: 100%;
     height: auto;
+    display: none;
 }
 
 #selected-book {
